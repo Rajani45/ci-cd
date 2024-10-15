@@ -1,37 +1,44 @@
-pipeline {
+pipeline{
     agent any
-    tools{
-        maven 'maven_3_5_0'
+    tools
+    {
+        maven 'maven'
     }
     stages{
-        stage('Build Maven'){
+        stage('checkout from scm')
+        {
             steps{
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Java-Techie-jt/devops-automation']]])
-                sh 'mvn clean install'
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Rajani45/ci-cd.git']])
             }
         }
-        stage('Build docker image'){
+        stage('build')
+        {
+            steps{
+                sh 'mvn clean install package'
+            }
+        }
+        stage ('docker image build')
+        {
+            steps{
+                sh 'docker build -t rajaninandu/cicd-image .'
+            }
+        }
+        stage('pusing image')
+        {
             steps{
                 script{
-                    sh 'docker build -t javatechie/devops-integration .'
+                withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'dockerhubpwd')]) {
+                    sh 'docker login -u rajaninandu -p ${dockerhubpwd}'
+                }
+                    sh 'docker push rajaninandu/cicd-image'
                 }
             }
         }
-        stage('Push image to Hub'){
+        stage('deploying in k8s')
+        {
             steps{
-                script{
-                   withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
-                   sh 'docker login -u javatechie -p ${dockerhubpwd}'
-
-}
-                   sh 'docker push javatechie/devops-integration'
-                }
-            }
-        }
-        stage('Deploy to k8s'){
-            steps{
-                script{
-                    kubernetesDeploy (configs: 'deploymentservice.yaml',kubeconfigId: 'k8sconfigpwd')
+                withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
+                    sh 'kubectl apply -f deploymentservice.yaml'
                 }
             }
         }
