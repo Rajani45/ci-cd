@@ -39,6 +39,17 @@ pipeline{
             steps{
                 withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
                     sh 'kubectl apply -f deploymentservice.yaml'
+
+                # sshagent(['k8s-ssh']) {
+                # sh "scp -o StrictHostKeyChecking=no deploymentservice.yaml ubuntu@52.23.252.160:/home/ubuntu"
+                # script{
+                # //try{
+                # sh "ssh  ubuntu@52.23.252.160 kubectl apply -f ."
+                # }
+                # //sh " ubuntu@52.23.252.160 kubectl create -f ."
+                # }
+                # }
+                # }    
                 }
             }
         }
